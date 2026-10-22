@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beam-check-desk"
+version = "0.1.0"
+description = "Windows desktop tool for steel W-shape beam analysis and AISC 360 checks with a PDF calc package"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.26",
+    "matplotlib>=3.8",
+    "reportlab>=4.0",
+    "PySide6>=6.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pyinstaller>=6.6"]
+
+[project.scripts]
+beam-check-desk = "beam_check_desk.ui.main_window:main"
+
+[tool.setuptools.packages.find]
+include = ["beam_check_desk*"]
+
+[tool.setuptools.package-data]
+"beam_check_desk.data" = ["*.csv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

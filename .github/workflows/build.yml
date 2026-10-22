@@ -1,0 +1,50 @@
+name: Build Windows app
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+
+  build:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Build single-file exe
+        run: pyinstaller packaging/beam_check_desk.spec --noconfirm --distpath dist
+      - name: Smoke test the exe starts
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\BeamCheckDesk.exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) { throw "BeamCheckDesk.exe exited early with code $($p.ExitCode)" }
+          Stop-Process -Id $p.Id
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BeamCheckDesk-windows
+          path: dist/BeamCheckDesk.exe
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/BeamCheckDesk.exe
+          generate_release_notes: true
