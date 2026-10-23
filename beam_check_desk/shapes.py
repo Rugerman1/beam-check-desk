@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from functools import lru_cache
-from importlib.resources import files
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,9 @@ _FIELDS = [
 
 @lru_cache(maxsize=1)
 def load_shapes() -> dict[str, Shape]:
-    path = files("beam_check_desk.data").joinpath("aisc_w_shapes.csv")
+    # Resolved from this file so it works both from source and inside a
+    # PyInstaller bundle, where the CSV sits next to the frozen package.
+    path = Path(__file__).resolve().parent / "data" / "aisc_w_shapes.csv"
     shapes: dict[str, Shape] = {}
     with path.open(newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):

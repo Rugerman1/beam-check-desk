@@ -432,7 +432,25 @@ class MainWindow(QMainWindow):
         )
 
 
+def selftest() -> int:
+    """Headless check used by the packaged exe in CI: build the window, run
+    the example beam, render the diagram.  Exit code 0 means the bundle has
+    everything it needs (Qt plugins, matplotlib, the AISC table)."""
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    app = QApplication.instance() or QApplication(sys.argv)
+    win = MainWindow()
+    win.run()
+    ok = win.check is not None and win.check.passes and not win.diagram.pixmap().isNull()
+    win.close()
+    app.processEvents()
+    # Skip interpreter teardown: Qt's offscreen platform can crash while the
+    # process is already exiting, and only the exit code matters here.
+    os._exit(0 if ok else 1)
+
+
 def main():
+    if "--selftest" in sys.argv:
+        selftest()
     app = QApplication(sys.argv)
     app.setApplicationName("Beam Check Desk")
     win = MainWindow()

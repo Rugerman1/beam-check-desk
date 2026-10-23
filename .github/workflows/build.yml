@@ -31,13 +31,11 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Build single-file exe
         run: pyinstaller packaging/beam_check_desk.spec --noconfirm --distpath dist
-      - name: Smoke test the exe starts
+      - name: Self-test the exe (builds the window and runs the example beam)
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath dist\BeamCheckDesk.exe -PassThru
-          Start-Sleep -Seconds 20
-          if ($p.HasExited) { throw "BeamCheckDesk.exe exited early with code $($p.ExitCode)" }
-          Stop-Process -Id $p.Id
+          $p = Start-Process -FilePath dist\BeamCheckDesk.exe -ArgumentList "--selftest" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "BeamCheckDesk.exe --selftest failed with exit code $($p.ExitCode)" }
       - uses: actions/upload-artifact@v4
         with:
           name: BeamCheckDesk-windows
