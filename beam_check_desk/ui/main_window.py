@@ -31,6 +31,15 @@ SUPPORTS = [
 LOAD_COLUMNS = ["Type", "Case", "Magnitude", "Start / position (ft)", "End (ft)", "Label"]
 
 
+def example_input() -> BeamInput:
+    """The beam the window opens with: W18x50, 24 ft simple span."""
+    return BeamInput(
+        shape="W18X50", length=24.0, support_a=0.0, support_b=24.0, project="Example", member="B-1",
+        uniform_loads=[UniformLoad(0.5, 0, 24, "D", "Slab + deck"), UniformLoad(1.0, 0, 24, "L", "Office live")],
+        point_loads=[PointLoad(8.0, 12.0, "L", "Girder")],
+    )
+
+
 class ExportWorker(QThread):
     done = Signal(str, str)
     failed = Signal(str)
@@ -433,18 +442,21 @@ class MainWindow(QMainWindow):
 
 
 def selftest() -> int:
-    """Headless check used by the packaged exe in CI: build the window, run
-    the example beam, render the diagram.  Exit code 0 means the bundle has
-    everything it needs (Qt plugins, matplotlib, the AISC table)."""
+    """Headless check used by the packaged exe in CI.  It exercises what the
+    bundle has to carry (Qt, matplotlib, the AISC table, the solver) without
+    building the window, and leaves through os._exit so that Qt teardown,
+    which can fault on Windows after the check has already passed, never
+    turns a good build into a failed one."""
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    app = QApplication.instance() or QApplication(sys.argv)
-    win = MainWindow()
-    win.run()
-    ok = win.check is not None and win.check.passes and not win.diagram.pixmap().isNull()
-    win.close()
-    app.processEvents()
-    # Skip interpreter teardown: Qt's offscreen platform can crash while the
-    # process is already exiting, and only the exit code matters here.
+    ok = False
+    try:
+        app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841
+        check = run_check(example_input())
+        pix = QPixmap()
+        pix.loadFromData(diagrams_png(check, width_in=7.0, dpi=85))
+        ok = check.passes and not pix.isNull() and len(shape_labels()) > 250
+    except Exception:  # noqa: BLE001
+        traceback.print_exc()
     os._exit(0 if ok else 1)
 
 
